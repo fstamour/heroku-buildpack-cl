@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # bin/compile <build-dir> <cache-dir>
 
+echo "Printing config vars: "
+echo "$@"
+
 mktmpdir() {
   dir=$(mktemp -t node-$1-XXXX)
   rm -rf $dir
   mkdir -p $dir
   echo $dir
 }
+
 function indent() {
   c='s/^/       /'
   case $(uname) in
