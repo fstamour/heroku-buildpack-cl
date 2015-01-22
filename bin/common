@@ -1,0 +1,7 @@
+# Dont put a #! here, this file is not meant to be executed.
+
+# This file is meant to be sourced in most scripts (compile, test-compile, etc.).
+# So we can have only one source of truth for the configurations.
+
+# List of configuration variables that we need to manage.
+CONFIG_VARIABLES="CL_IMPL CL_WEBSERVER"

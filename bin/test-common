@@ -1,0 +1,10 @@
+# Dont put a #! here, this file is not meant to be executed.
+
+# This file is meant to be sourced in bin/test-compile and bin/test-run scripts.
+# So we can have only one source of truth for the configurationse.
+
+PREFIX=/tmp/heroku-local
+BUILD_DIR="${PREFIX}/build"
+CACHE_DIR="${PREFIX}/cache"
+CONFIG_VAR_DIR="${PREFIX}/config"
+

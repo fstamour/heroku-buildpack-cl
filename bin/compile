@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# bin/compile <build-dir> <cache-dir>
 
-CONFIG_VAR_DIR="$3"
+#
+# NOTE: bin/compile <build-dir> <cache-dir> <config-var-dir>
+#
 
 # The actual purpose of this function is not to print the configuation variable,
 # but to show how to access them.
@@ -36,19 +37,27 @@ function indent() {
   esac
 }
 
-# Getting required config vars
-for var in CL_IMPL CL_WEBSERVER; do 
-    setup_var "$var"
-done
-export CL_WEBSERVER
+############ End of function section
 
-# parse and derive params
-BUILDPACK_DIR=$(cd $(dirname $0); cd ..; pwd) # absolute path of buildpack
+# Getting this script's path (note: bashism)
+SCRIPT_DIR="$(dirname ${BASH_SOURCE[0]})";
+
+# Sourcing some common configurations
+source "${SCRIPT_DIR}/common"
+
+# Setting variables from arguments
 BUILD_DIR=$1
 CACHE_DIR=$2
+CONFIG_VAR_DIR=$3
+
+# Setting variables from heroku's configuration vartiable.
+for var in ${CONFIG_VARIABLES}; do 
+    setup_var "$var"
+done
+BUILDPACK_DIR=$(cd $(dirname $0); cd ..; pwd) # absolute path of buildpack
 
 CL_DIR="$CACHE_DIR/$CL_IMPL"
-echo "-----> compile params: $BUILD_DIR $CACHE_DIR"
+echo "-----> compile params: $BUILD_DIR $CACHE_DIR $CONFIG_VAR_DIR"
 
 if [ $RESET_CACHE ]; then
   echo "-----> flushing cache"
@@ -121,6 +130,7 @@ echo "$CL_IMPL installed" | indent
 export BUILDPACK_DIR
 export CACHE_DIR
 export BUILD_DIR
+export CL_WEBSERVER
 
 echo "-----> Starting build"
 case $CL_IMPL in
@@ -128,10 +138,6 @@ case $CL_IMPL in
   ccl) $CCL_DEFAULT_DIRECTORY/scripts/ccl64 -l "$BUILDPACK_DIR/setup/compile.lisp";;
 esac
 echo "-----> Build finished"
-
-echo "-----> Listing files in \$BUILD_DIR"
-ls -l $BUILD_DIR
-echo "-----> End of listing"
 
 chmod a+x $BUILD_DIR/lispapp
 

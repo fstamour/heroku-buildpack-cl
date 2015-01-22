@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 
-mv /tmp/cache /tmp/was-cache 
+# To debug
+set -x
+
+# Getting this script's path (note: bashism)
+SCRIPT_DIR="$(dirname ${BASH_SOURCE[0]})";
+
+# Sourcing some common configurations
+source "${SCRIPT_DIR}/common"
+source "${SCRIPT_DIR}/test-common"
+
+mv "${CACHE_DIR}" "${CACHE_DIR}/$(date +%F_%H-%M)"
 export PORT=3000
-/tmp/build/lispapp
+"${BUILD_DIR}/lispapp"
 

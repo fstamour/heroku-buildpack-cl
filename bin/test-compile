@@ -6,13 +6,33 @@
 
 # run in app repository directory (eg ~/repos/heroku-cl-example/)
 
-rm -rf /tmp/build
-git clone -l . /tmp/build
+# To debug
+set -x
 
-# comment out this section to reuse the cache
-#$rm -rf /tmp/cache
-#mkdir /tmp/cache
-#ln -s /misc/repos/sbcl /tmp/cache/sbcl
+# Getting this script's path (note: bashism)
+SCRIPT_DIR="$(dirname ${BASH_SOURCE[0]})";
 
-cd /tmp/build
-~/src/lisp/heroku-buildpack-cl/bin/compile /tmp/build /tmp/cache
+# Sourcing some common configurations
+source "${SCRIPT_DIR}/common"
+source "${SCRIPT_DIR}/test-common"
+
+for dir in "${BUILD_DIR}" "${CACHE_DIR}" "${CONFIG_VAR_DIR}"; do
+    # @todo if not exist
+    rm -rf "$dir"
+    mkdir -p "$dir"
+done
+
+# Creating a fresh copy of the HEAD of the repository we're in.
+git clone --local --no-hardlinks . "${BUILD_DIR}"
+
+# Setup configuration variables
+for var in ${CONFIG_VARIABLES}; do
+    echo -n $(heroku config:get $var) > "${CONFIG_VAR_DIR}/$var"
+done
+
+# What's dat?
+#ln -s /misc/repos/sbcl ${CACHE_DIR}/sbcl
+
+cd "${BUILD_DIR}"
+"${SCRIPT_DIR}/compile" "${BUILD_DIR}" "${CACHE_DIR}" "${CONFIG_VAR_DIR}"
+
