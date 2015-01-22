@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
 # bin/compile <build-dir> <cache-dir>
 
-echo "Printing config vars: "
-for file in $(ls "$3"); do
-    echo -n "${file}="
-    cat "${3}/${file}"
-    echo
-done
+CONFIG_VAR_DIR="$3"
+
+# The actual purpose of this function is not to print the configuation variable,
+# but to show how to access them.
+dump_config_vars() {
+    echo "Config vars: "
+    for file in $(ls "${CONFIG_VAR_DIR}"); do
+	echo -n "${file}="
+	cat "${CONFIG_VAR_DIR}/${file}"
+	echo
+    done
+}
+
+# Function to create a shell variable for a config variable.
+# Take variable's name in $1
+# WARN: Uses the evil eval.
+setup_var() {
+    eval ${1}=$(cat "${CONFIG_VAR_DIR}/${1}")
+}
 
 mktmpdir() {
   dir=$(mktemp -t node-$1-XXXX)
@@ -22,6 +35,11 @@ function indent() {
     *)      sed -u "$c";;
   esac
 }
+
+# Getting required config vars
+for var in CL_IMPL CL_WEBSERVER; do 
+    setup_var
+done
 
 # parse and derive params
 BUILDPACK_DIR=$(cd $(dirname $0); cd ..; pwd) # absolute path of buildpack
