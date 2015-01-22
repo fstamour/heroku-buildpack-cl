@@ -4,7 +4,9 @@
 echo "Printing config vars: "
 ls "$3"
 for file in $(ls "$3"); do
+    echo -n "$file"
     cat "${3}/${file}"
+    echo
 done
 
 mktmpdir() {
