@@ -128,5 +128,9 @@ case $CL_IMPL in
 esac
 echo "-----> Build finished"
 
+echo "-----> Listing files in \$BUILD_DIR"
+ls -l $BUILD_DIR
+echo "-----> End of listing"
+
 chmod a+x $BUILD_DIR/lispapp
 
