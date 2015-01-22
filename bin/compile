@@ -40,6 +40,7 @@ function indent() {
 for var in CL_IMPL CL_WEBSERVER; do 
     setup_var "$var"
 done
+export CL_WEBSERVER
 
 # parse and derive params
 BUILDPACK_DIR=$(cd $(dirname $0); cd ..; pwd) # absolute path of buildpack
