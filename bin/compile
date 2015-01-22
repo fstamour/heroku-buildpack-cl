@@ -2,7 +2,10 @@
 # bin/compile <build-dir> <cache-dir>
 
 echo "Printing config vars: "
-echo "$@"
+ls "$3"
+for file in $(ls "$3"); do
+    cat "${3}/${file}"
+done
 
 mktmpdir() {
   dir=$(mktemp -t node-$1-XXXX)
