@@ -38,7 +38,7 @@ function indent() {
 
 # Getting required config vars
 for var in CL_IMPL CL_WEBSERVER; do 
-    setup_var
+    setup_var "$var"
 done
 
 # parse and derive params
