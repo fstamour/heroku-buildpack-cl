@@ -4,13 +4,15 @@
 set -x
 
 # Getting this script's path (note: bashism)
-SCRIPT_DIR="$(dirname ${BASH_SOURCE[0]})";
+SCRIPT_DIR="$(readlink -f $(dirname ${BASH_SOURCE[0]}))";
 
 # Sourcing some common configurations
 source "${SCRIPT_DIR}/common"
 source "${SCRIPT_DIR}/test-common"
 
-mv "${CACHE_DIR}" "${CACHE_DIR}/$(date +%F_%H-%M)"
+if [ -d "${CACHE_DIR}" ]; then
+    mv "${CACHE_DIR}" "${CACHE_DIR}/$(date +%F_%H-%M)"
+fi
 export PORT=3000
 "${BUILD_DIR}/lispapp"
 
