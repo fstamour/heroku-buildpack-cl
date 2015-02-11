@@ -140,6 +140,7 @@ esac
 echo "-----> Build finished"
 
 echo "-----> Listing files in \$BUILD_DIR"
+echo ls -l $BUILD_DIR
 ls -l $BUILD_DIR
 echo "-----> End of listing"
 
