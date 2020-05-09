@@ -73,9 +73,6 @@ if [ ${RESET_CACHE+x} ]; then
   rm -rf $CACHE_DIR/*
 fi
 
-# apt-get update
-apt-get install -y sbcl openssl
-
 # if [ ! -d $CL_DIR ]; then
 #     echo "-----> Installing $CL_IMPL"
 #     mkdir -p $CL_DIR
