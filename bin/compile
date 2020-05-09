@@ -1,16 +1,30 @@
 #!/usr/bin/env bash
+# Note, this script is called by heroku like this:
+#   bin/compile <build-dir> <cache-dir> <config-var-dir>
 
-#
-# NOTE: bin/compile <build-dir> <cache-dir> <config-var-dir>
-#
+### Error handling configuration (just stop on any error)
+
+# -e  Exit immediately if a command exits with a non-zero status.
+set -e
+
+# -u  Treat unset variables as an error when substituting.
+set -u
+
+# -o pipefail
+# the return value of a pipeline is the status of the last command to
+# exit with a non-zero status, or zero if no command exited with a
+# non-zero status
+set -o pipefail
+
+### Utility functions 
 
 # The actual purpose of this function is not to print the configuation variable,
 # but to show how to access them.
 dump_config_vars() {
     echo "Config vars: "
-    for file in $(ls "${CONFIG_VAR_DIR}"); do
+    for file in $(ls "${ENV_DIR}"); do
 	echo -n "${file}="
-	cat "${CONFIG_VAR_DIR}/${file}"
+	cat "${ENV_DIR}/${file}"
 	echo
     done
 }
@@ -19,25 +33,10 @@ dump_config_vars() {
 # Take variable's name in $1
 # WARN: Uses the evil eval.
 setup_var() {
-    eval ${1}=$(cat "${CONFIG_VAR_DIR}/${1}")
+    eval ${1}=$(cat "${ENV_DIR}/${1}")
 }
 
-mktmpdir() {
-  dir=$(mktemp -t node-$1-XXXX)
-  rm -rf $dir
-  mkdir -p $dir
-  echo $dir
-}
-
-function indent() {
-  c='s/^/       /'
-  case $(uname) in
-    Darwin) sed -l "$c";;
-    *)      sed -u "$c";;
-  esac
-}
-
-############ End of function section
+echo "Initialising variables..."
 
 # Getting this script's path (note: bashism)
 SCRIPT_DIR="$(readlink -f $(dirname ${BASH_SOURCE[0]}))";
@@ -47,8 +46,11 @@ source "${SCRIPT_DIR}/common"
 
 # Setting variables from arguments
 BUILD_DIR=$1
+echo '$BUILD_DIR="'$BUILD_DIR'"'
 CACHE_DIR=$2
-CONFIG_VAR_DIR=$3
+echo '$CACHE_DIR="'$CACHE_DIR'"'
+ENV_DIR=$3
+echo '$ENV_DIR="'$ENV_DIR'"'
 
 # Setting variables from heroku's configuration vartiable.
 for var in ${CONFIG_VARIABLES}; do 
@@ -57,85 +59,79 @@ done
 BUILDPACK_DIR=$(cd $(dirname $0); cd ..; pwd) # absolute path of buildpack
 
 CL_DIR="$CACHE_DIR/$CL_IMPL"
-echo "-----> compile params: $BUILD_DIR $CACHE_DIR $CONFIG_VAR_DIR"
+echo "-----> compile params: $BUILD_DIR $CACHE_DIR $ENV_DIR"
 
-if [ $RESET_CACHE ]; then
+if [ ! -z ${CL_IMPL+x} ]; then
+    echo '$CL_IMPL not set, setting to default "sbcl"'
+    CL_IMPL=sbcl
+fi
+
+echo "Download dependencies..." 
+
+if [ ${RESET_CACHE+x} ]; then
   echo "-----> flushing cache"
   rm -rf $CACHE_DIR/*
 fi
 
-case $CL_IMPL in
-  sbcl)
-    S3_BUCKET="sbcl-heroku"
-    CL_PACKAGE="http://${S3_BUCKET}.s3.amazonaws.com/sbcl-1.0.54-x86-64-linux-binary.tar.bz2"
-    DECOMPRESS="tar xjf - -C $CL_DIR"
-    ;;
-  ccl)
-    S3_BUCKET="cl-heroku"
-    CL_PACKAGE="http://${S3_BUCKET}.s3.amazonaws.com/ccl-1.7.tgz"
-    DECOMPRESS="tar xzf - -C $CL_DIR"
-    export CCL_DEFAULT_DIRECTORY=$CL_DIR # overwrite CCL_DEFAULT_DIRECTORY on ccl64
-    ;;
-  *)
-    echo "-----> ! Please set CL_IMPL: heroku config:add CL_IMPL={sbcl|ccl}."
-    exit 1
-esac
+# if [ ! -d $CL_DIR ]; then
+#     echo "-----> Installing $CL_IMPL"
+#     mkdir -p $CL_DIR
 
-case $CL_WEBSERVER in
-  hunchentoot)
-    ;;
-  aserve)
-    # setting up paths for building
-    echo "-----> Getting patched versions of libraries"
-    
-    mkdir $CACHE_DIR/repos    # should be under an if to avoid error
-    pushd $CACHE_DIR/repos
-    
-    if [ -d $CACHE_DIR/repos/portableaserve ]; then
-         echo 'aserve already present'
-         pushd portableaserve
-         git pull origin master
-         popd
-    else 
-        git clone git://github.com/mtravers/portableaserve.git
-    fi
-    
-    if [ -d $CACHE_DIR/repos/wuwei ]; then
-         echo 'wuwei already present'
-         pushd wuwei
-         git pull origin master
-         popd
-    else 
-        git clone git://github.com/mtravers/wuwei.git
-    fi
-    
-    popd
-    ;;
-  *)
-    echo "-----> ! Please set CL_WEBSERVER: heroku config:add CL_WEBSERVER={hunchentoot|aserve}."
-    exit 1
-esac
 
-echo "-----> Installing $CL_IMPL"
-if [ ! -d $CL_DIR ]; then
-    echo "-----> Fetching $CL_IMPL"
-    mkdir -p $CL_DIR  && curl $CL_PACKAGE -s -o -  | $DECOMPRESS
-fi
+#     case $CL_IMPL in
+# 	sbcl)
+# 	    CL_PACKAGE="https://downloads.sourceforge.net/project/sbcl/sbcl/2.0.4/sbcl-2.0.4-x86-64-linux-binary.tar.bz2"
+# 	    CL_ARCHIVE=$(basename "$CL_PACKAGE")
+# 	    SHA512="68533e83a452ec56ee5520daef54c24cfbd4307d8aab231c726eec69562262f40213dd453879c6f82bf9f31d850561a5f3f99c1207a3197ccab8017c2208979d"
+# 	    echo "-----> Fetching $CL_IMPL"
+# 	    tmp=$(mktemp -d)
+# 	    pushd $tmp
+# 	    wget "$CL_PACKAGE"
+# 	    echo "Veryfing checksum..."
+# 	    echo "$SHA512 $CL_ARCHIVE" | sha512sum -c
+# 	    tar xjf $CL_ARCHIVE -C $CL_DIR
+# 	    ;;
+
+# 	ccl)
+# 	    S3_BUCKET="cl-heroku"
+# 	    CL_PACKAGE="http://${S3_BUCKET}.s3.amazonaws.com/ccl-1.7.tgz"
+# 	    DECOMPRESS="tar xzf - -C $CL_DIR"
+# 	    export CCL_DEFAULT_DIRECTORY=$CL_DIR # overwrite CCL_DEFAULT_DIRECTORY on ccl64
+# 	    echo "-----> Fetching $CL_IMPL"
+# 	    mkdir -p $CL_DIR  && curl $CL_PACKAGE -s -o -  | $DECOMPRESS
+# 	    ;;
+
+# 	*)
+# 	    echo "-----> ! Please set CL_IMPL: heroku config:add CL_IMPL={sbcl|ccl}."
+# 	    exit 1
+#     esac
+
+# fi
 
 # add to slug 
-cp -r $CL_DIR $BUILD_DIR
+# cp -r $CL_DIR $BUILD_DIR
 
-echo "$CL_IMPL installed" | indent
+# echo "$CL_IMPL installed"
+
+echo "Build..." 
 
 export BUILDPACK_DIR
 export CACHE_DIR
 export BUILD_DIR
 export CL_WEBSERVER
+# Tell ASDF to store binaries in the cache dir
+export XDG_CACHE_HOME=$CACHE_DIR/asdf/
 
 echo "-----> Starting build"
 case $CL_IMPL in
-  sbcl) sh $CL_DIR/sbcl-1.0.54-x86-64-linux/run-sbcl.sh --load "$BUILDPACK_DIR/setup/compile.lisp";;
-  ccl) $CCL_DEFAULT_DIRECTORY/scripts/ccl64 -l "$BUILDPACK_DIR/setup/compile.lisp";;
+    sbcl)
+	sbcl --load "$BUILDPACK_DIR/lib/quicklisp.lisp" \
+	     --eval '(quicklisp-quickstart:install)' \
+	     --script "$BUILDPACK_DIR/setup/compile.lisp"
+	;;
+    ccl)
+	$CCL_DEFAULT_DIRECTORY/scripts/ccl64 -l "$BUILDPACK_DIR/setup/compile.lisp"
+	;;
 esac
 echo "-----> Build finished"
 

@@ -16,7 +16,7 @@ SCRIPT_DIR="$(readlink -f $(dirname ${BASH_SOURCE[0]}))";
 source "${SCRIPT_DIR}/common"
 source "${SCRIPT_DIR}/test-common"
 
-for dir in "${BUILD_DIR}" "${CACHE_DIR}" "${CONFIG_VAR_DIR}"; do
+for dir in "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}"; do
     # @todo if not exist
     if [ -d "$dir" ]; then
 	rm -rf "$dir"
@@ -29,12 +29,9 @@ git clone --local --no-hardlinks . "${BUILD_DIR}"
 
 # Setup configuration variables
 for var in ${CONFIG_VARIABLES}; do
-    echo -n $(heroku config:get $var) > "${CONFIG_VAR_DIR}/$var"
+    echo -n $(heroku config:get $var) > "${ENV_DIR}/$var"
 done
 
-# What's dat?
-#ln -s /misc/repos/sbcl ${CACHE_DIR}/sbcl
-
 cd "${BUILD_DIR}"
-"${SCRIPT_DIR}/compile" "${BUILD_DIR}" "${CACHE_DIR}" "${CONFIG_VAR_DIR}"
+"${SCRIPT_DIR}/compile" "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}"
 
